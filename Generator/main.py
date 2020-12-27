@@ -1,6 +1,7 @@
 import requests
 import re
 import urllib.request
+import urllib.parse
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
@@ -151,12 +152,13 @@ def fetch_new_maps(lst,map_filters):
 
 
 def download_maps(lst):
+    osu_path = input("Enter the path location to your Songs! folder:").replace("\\","/")
     for index, beatmap in enumerate(lst):
         url = "https://bloodcat.com/osu/s/" + str(beatmap)
         req = urllib.request.Request(url, method='HEAD')
         r = urllib.request.urlopen(req)
-        filename = r.info().get_filename().replace("%20", " ")
-        urllib.request.urlretrieve(url,'C:/Users/Acer/AppData/Local/osu!/Songs/' + filename)
+        filename = urllib.parse.unquote(r.info().get_filename())  # decode the encoded non ASCII chars (e.g !)
+        urllib.request.urlretrieve(url, osu_path + '/' + filename)
         print("finished downloading", str(index+1), "map(s)! (" + filename + ")")
 
 fetch_access_token()
