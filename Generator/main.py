@@ -1,5 +1,6 @@
 import requests
-import json
+import re
+import urllib.request
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
@@ -81,7 +82,6 @@ def fetch_access_token():
 # how the maps are filtered
 def map_filter(dct,map_filters):
     beatmapset_diffs = dct
-    print(beatmapset_diffs)
 
     # find top diff
     diff_star_ratings = [dct['difficulty_rating'] for dct in beatmapset_diffs]  # holds the star rating of each diff
@@ -134,6 +134,7 @@ def fetch_new_maps(lst,map_filters):
 
     with open('access_token.txt','r') as f:
         access_token = f.readline().rstrip("\n")
+    global token_header
     token_header = {'Authorization': 'Bearer ' + access_token}
 
     for map_id in maps_to_filter:
@@ -148,16 +149,26 @@ def fetch_new_maps(lst,map_filters):
 
     return new_maps
 
+
+def download_maps(lst):
+    for index, beatmap in enumerate(lst):
+        url = "https://bloodcat.com/osu/s/" + str(beatmap)
+        req = urllib.request.Request(url, method='HEAD')
+        r = urllib.request.urlopen(req)
+        filename = r.info().get_filename().replace("%20", " ")
+        urllib.request.urlretrieve(url,'C:/Users/Acer/AppData/Local/osu!/Songs/' + filename)
+        print("finished downloading", str(index+1), "map(s)! (" + filename + ")")
+
 fetch_access_token()
-users_maps = fetch_maps(1000)
+# users_maps = fetch_maps(1000)
 filters = {'len':60,
-           'stars':7,
+           'stars':6,
            'ar':9,
-           'bpm':160,
+           'bpm':130,
            'cs':4.2,
            'status': 'any'
            }
-maps = fetch_new_maps(users_maps,filters)
-print(maps)
+maps = fetch_new_maps([905674,1238488],filters)
+download_maps(maps)
 print(time.time() - starting_time, "seconds")
 
