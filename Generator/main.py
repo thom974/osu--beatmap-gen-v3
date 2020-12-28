@@ -1,5 +1,7 @@
 import requests
+import math
 import pygame
+from pygame.time import Clock
 import re
 import urllib.request
 import urllib.parse
@@ -47,7 +49,23 @@ class Triangle:
         return triangle_surfaces
 
 
+class Button:
+    def __init__(self,center,dimensions,font_colour,font):
+        self.width, self.height = dimensions
+        self.center_coords = center
+        self.font_colour = font_colour
+        self.font = font
+        self.text = ""
+
+    def create_button_elements(self):
+        button_rect = pygame.Rect(0,0,self.width,self.height)
+        button_rect.center = self.center_coords
+        button_font = self.font.render(self.text,True,self.font_colour)
+        button_font_rect = button_font.get_rect()
+        button_font_rect.center = self.center_coords
+        return button_rect, button_font, button_font_rect
 #--------------------------------------FUNCTIONALITY--------------------------------------------------------------------
+
 
 def return_sc(driver):
     return driver.page_source
@@ -96,27 +114,31 @@ def fetch_access_token(**kwargs):
                      'scope': 'public'
                      }
     # from the response object, grab url
-    if kwargs['fetch_auth_link']:
+    if kwargs.get('fetch_auth_link') and kwargs['fetch_auth_link']:
         constructed_url = requests.get('https://osu.ppy.sh/oauth/authorize', params=req_user_perm).url
         with open('resources/auth_link.txt','w') as f:
             f.write(constructed_url)
         return True
 
     # fetch the auth_token from redirected URL
-    code_for_auth = input("Copy and paste the URL of the redirected site after authorizing:").split("=")[1]
+    if kwargs.get('code_passed') and kwargs['code_passed']:
+        with open('resources/redirect_link.txt','r') as f:
+            code_for_auth = f.readline().split("=")[1].rstrip("\n")
 
-    # fetch authorization token
-    auth_body_data = {'client_id':'1659',
-                      'client_secret': 'kQYctkFBxE2vVWNlSzZdmPlLtBYdFE8a2m3cPrlE',
-                      'code': code_for_auth,
-                      'grant_type': 'authorization_code',
-                      'redirect_uri': 'https://osu.ppy.sh/beatmapsets'
-                      }
-    code_response_text = requests.post('https://osu.ppy.sh/oauth/token', data=auth_body_data).text
-    access_token = code_response_text.split(",")[2].split(":")[1][1:-1]
+        # fetch authorization token
+        auth_body_data = {'client_id':'1659',
+                          'client_secret': 'kQYctkFBxE2vVWNlSzZdmPlLtBYdFE8a2m3cPrlE',
+                          'code': code_for_auth,
+                          'grant_type': 'authorization_code',
+                          'redirect_uri': 'https://osu.ppy.sh/beatmapsets'
+                          }
+        code_response_text = requests.post('https://osu.ppy.sh/oauth/token', data=auth_body_data).text
+        access_token = code_response_text.split(",")[2].split(":")[1][1:-1]
 
-    with open('resources/access_token.txt', 'w') as f:
-        f.write(access_token)
+        with open('resources/access_token.txt', 'w') as f:
+            f.write(access_token)
+
+        return True
 
 
 # how the maps are filtered
@@ -217,11 +239,13 @@ print(time.time() - starting_time, "seconds")
 pygame.init()
 pygame.display.set_caption("osu!")
 W, H = 900,600
+FPS = 120
 screen = pygame.display.set_mode((W,H))
 bg = pygame.Surface((W, H))
 bg.fill((51, 57, 84))
 osu_font = pygame.font.Font('resources/Aller_Bd.ttf', 30)
 osu_font_small = pygame.font.Font('resources/Aller_Bd.ttf', 16)
+clock = Clock()
 
 
 def no_access_token_message():
@@ -236,9 +260,52 @@ def no_access_token_message():
     return surface
 
 
+def transition(width,height,copy):
+    running = True
+    x = 200
+    while running:
+        screen.blit(copy,(0,0))
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                quit()
+        pygame.draw.rect(screen,(255,255,255), (x,100,100,100),0)
+        x += 1
+
+        # update the screen
+        pygame.display.flip()
+        clock.tick(120)
+
+
+
 def main_window(width, height):
     triangles = Triangle.create_triangles(25, width, height)
     y_offset = 0.2
+
+    # creating title variables
+    title_text = osu_font.render("osu! Beatmap Generator v3", True, (255, 255, 255))
+    header_text = osu_font_small.render("Made by: accent (thomas)", True, (255, 255, 255))
+    title_rect = title_text.get_rect()
+    header_rect = header_text.get_rect()
+    title_rect.center = (width // 2, 50)
+    header_rect.center = (width // 2, 90)
+
+    # no access token message
+    msg = no_access_token_message()
+
+    # arrow button values
+    arrow_button = Button((450, 400), (80, 32), (51, 57, 84), osu_font)
+    arrow_button.text = ">>>"
+    button_rect, button_font, button_font_rect = arrow_button.create_button_elements()
+
+    # successfully authorized message
+    success_text = osu_font.render("Successfully authorized! Click to get started.", True, (255, 255, 255))
+    success_rect = success_text.get_rect()
+    success_rect.center = (450,300)
+
+    # successfully authorized button
+    success_button = Button((450,370),(80,32),(51, 57, 84),osu_font)
+    success_button.text = ">>>"
+    success_button_rect, success_button_font, success_button_font_rect = success_button.create_button_elements()
 
     # main program loop
     running = True
@@ -270,53 +337,61 @@ def main_window(width, height):
         screen.blit(text,text_rect)
 
         # display title
-        title_text = osu_font.render("osu! Beatmap Generator v3", True, (255,255,255))
-        header_text = osu_font_small.render("Made by: accent (thomas)", True, (255,255,255))
-        title_rect = title_text.get_rect()
-        header_rect = header_text.get_rect()
-        title_rect.center = (width // 2, 50)
-        header_rect.center = (width // 2, 90)
         screen.blit(title_text,title_rect)
         screen.blit(header_text,header_rect)
 
         # tell user if they have an access token
         if not has_access_token():
-            msg = no_access_token_message()
             screen.blit(msg,(150,175))
-
-            # create 'arrow' text
-            osu_font_arrow_text = osu_font.render('>>>', True, (51, 57, 84))
-            arrow_rect = osu_font_arrow_text.get_rect()
-            arrow_rect.center = (450,400)
-
-            # create and draw the button and 'arrow' text to send user to auth. window
-            get_token_button = pygame.Rect(0, 0, 80, 32)
-            get_token_button.center = (450, 400)
-            pygame.draw.rect(screen, (255, 255, 255), get_token_button)
-            screen.blit(osu_font_arrow_text,arrow_rect)
+            pygame.draw.rect(screen, (255, 255, 255), button_rect)
+            screen.blit(button_font,button_font_rect)
 
             # check if button pressed
-            if get_token_button.collidepoint(mx, my) and mouse_clicked:
+            if button_rect.collidepoint(mx, my) and mouse_clicked:
                 auth_window(width,height)
+        else:
+            screen.blit(success_text,success_rect)
+            pygame.draw.rect(screen,(255,255,255),success_button_rect)
+            screen.blit(success_button_font,success_button_font_rect)
+
+            # check if button pressed
+            if success_button_rect.collidepoint(mx,my) and mouse_clicked:
+                transition(width,height,screen.copy())
 
         # update screen
         pygame.display.flip()
+        clock.tick(120)
 
 
 def auth_window(width,height):
+    # variables whose values are declared once OR at the start only
     running = True
     triangles = Triangle.create_triangles(25, width, height)
     y_offset = 0.2
-    # initial_text = fetch_access_token(fetch_auth_link=True)
-    # text_input = pygame_textinput.TextInput()  # for text input
+
+    # variables for text instructions on how to authorize
     fetched_user_auth_link = fetch_access_token(fetch_auth_link=True)
+    auth_message = osu_font_small.render("Locate resources/auth_link.txt where this app is stored.", True,(255, 255, 255))
+    auth_message2 = osu_font_small.render("Visit the link, authorize the program, and copy the entire URL once you get redirected.", True,(255, 255, 255))
+    auth_message3 = osu_font_small.render("Replace the authorization link in auth_link.txt with that URL. Make sure it is the only line in that file.",True, (255, 255, 255))
+    a_rect = auth_message.get_rect()
+    a_rect2 = auth_message2.get_rect()
+    a_rect3 = auth_message3.get_rect()
+    a_rect.center = (450, 175)
+    a_rect2.center = (450, 225)
+    a_rect3.center = (450, 275)
+
+    # button for user to press when they have finished authorizing
+    finished_button = Button((450,325),(80,32),(51, 57, 84),osu_font_small)
+    finished_button.text = "Done!"
+    finished_button_rect, finished_button_font, finished_button_font_rect = finished_button.create_button_elements()
 
     while running:
         screen.blit(bg,(0,0))
-
+        mx, my = pygame.mouse.get_pos()
         # event listener loop
         events = pygame.event.get()
-        # text_input.update(events)  # pass events to text input every frame
+        mouse_clicked = False
         for event in events:
             if event.type == pygame.QUIT:
                 quit()
@@ -338,15 +413,17 @@ def auth_window(width,height):
         # screen.blit(text_input.get_surface(), (450, 300)) // not used for now (text input obj)
 
         if fetched_user_auth_link:
-            auth_message = osu_font_small.render("Locate resources/auth_link.txt where this app is stored.", True, (255,255,255))
-            auth_message2 = osu_font_small.render("Visit the link, authorize the program, and copy the redirect url.", True, (255,255,255))
-            a_rect = auth_message.get_rect()
-            a_rect2 = auth_message2.get_rect()
-            a_rect.center = (450,150)
-            a_rect2.center = (450,200)
             screen.blit(auth_message, a_rect)
             screen.blit(auth_message2, a_rect2)
+            screen.blit(auth_message3, a_rect3)
+            pygame.draw.rect(screen,(255,255,255),finished_button_rect)
+            screen.blit(finished_button_font,finished_button_font_rect)
+
+            if finished_button_rect.collidepoint(mx,my) and mouse_clicked:  # return to main menu
+                if fetch_access_token(code_passed=True):
+                    running = False
 
         pygame.display.flip()
+        clock.tick(120)
 
 main_window(W,H)
