@@ -9,7 +9,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 import time
 import random
-import threading
+import pygame_textinput
 
 starting_time = time.time()
 #------------------------------------------------------CLASSES----------------------------------------------------------
@@ -88,38 +88,35 @@ def fetch_maps(num):
     return generated_maps
 
 
-def fetch_access_token():
-    if not has_access_token() == 0:  # if there is no access token
-        # parameters used to construct initial authorization url for the client
-        req_user_perm = {'client_id':'1659',
-                         'redirect_uri': 'https://osu.ppy.sh/beatmapsets',
-                         'response_type': 'code',
-                         'scope': 'public'
-                         }
-        # from the response object, grab url
+def fetch_access_token(**kwargs):
+    # parameters used to construct initial authorization url for the client
+    req_user_perm = {'client_id':'1659',
+                     'redirect_uri': 'https://osu.ppy.sh/beatmapsets',
+                     'response_type': 'code',
+                     'scope': 'public'
+                     }
+    # from the response object, grab url
+    if kwargs['fetch_auth_link']:
         constructed_url = requests.get('https://osu.ppy.sh/oauth/authorize', params=req_user_perm).url
+        with open('resources/auth_link.txt','w') as f:
+            f.write(constructed_url)
+        return True
 
-        # send user to auth. page // this was using selenium
-        # driver = webdriver.Chrome('C:\Program Files (x86)\chromedriver.exe')
-        # driver.get(constructed_url)
-        # print(constructed_url)
+    # fetch the auth_token from redirected URL
+    code_for_auth = input("Copy and paste the URL of the redirected site after authorizing:").split("=")[1]
 
-        print("Please visit this link to authorize the client:", constructed_url)
-        # fetch the auth_token from redirected URL
-        code_for_auth = input("Copy and paste the URL of the redirected site after authorizing:").split("=")[1]
+    # fetch authorization token
+    auth_body_data = {'client_id':'1659',
+                      'client_secret': 'kQYctkFBxE2vVWNlSzZdmPlLtBYdFE8a2m3cPrlE',
+                      'code': code_for_auth,
+                      'grant_type': 'authorization_code',
+                      'redirect_uri': 'https://osu.ppy.sh/beatmapsets'
+                      }
+    code_response_text = requests.post('https://osu.ppy.sh/oauth/token', data=auth_body_data).text
+    access_token = code_response_text.split(",")[2].split(":")[1][1:-1]
 
-        # fetch authorization token
-        auth_body_data = {'client_id':'1659',
-                          'client_secret': 'kQYctkFBxE2vVWNlSzZdmPlLtBYdFE8a2m3cPrlE',
-                          'code': code_for_auth,
-                          'grant_type': 'authorization_code',
-                          'redirect_uri': 'https://osu.ppy.sh/beatmapsets'
-                          }
-        code_response_text = requests.post('https://osu.ppy.sh/oauth/token', data=auth_body_data).text
-        access_token = code_response_text.split(",")[2].split(":")[1][1:-1]
-
-        with open('resources/access_token.txt', 'w') as f:
-            f.write(access_token)
+    with open('resources/access_token.txt', 'w') as f:
+        f.write(access_token)
 
 
 # how the maps are filtered
@@ -177,7 +174,6 @@ def fetch_new_maps(lst,map_filters):
 
     with open('resources/access_token.txt', 'r') as f:
         access_token = f.readline().rstrip("\n")
-    global token_header
     token_header = {'Authorization': 'Bearer ' + access_token}
 
     for map_id in maps_to_filter:
@@ -311,27 +307,45 @@ def auth_window(width,height):
     running = True
     triangles = Triangle.create_triangles(25, width, height)
     y_offset = 0.2
+    # initial_text = fetch_access_token(fetch_auth_link=True)
+    # text_input = pygame_textinput.TextInput()  # for text input
+    fetched_user_auth_link = fetch_access_token(fetch_auth_link=True)
 
     while running:
         screen.blit(bg,(0,0))
 
         # event listener loop
-        for event in pygame.event.get():
+        events = pygame.event.get()
+        # text_input.update(events)  # pass events to text input every frame
+        for event in events:
             if event.type == pygame.QUIT:
                 quit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_clicked = True
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    print("escape pressed")
                     running = False
 
+        # triangle background
         for triangle, location in triangles:
             screen.blit(triangle,location)
             location[1] -= y_offset
             if location[1] + triangle.get_height() < 0:
                 location[1] = height + 20  # set triangle below screen if past above
                 location[0] = random.randint(50,width-50)  # set triangle to random x value
+
+        # code for text input
+        # screen.blit(text_input.get_surface(), (450, 300)) // not used for now (text input obj)
+
+        if fetched_user_auth_link:
+            auth_message = osu_font_small.render("Locate resources/auth_link.txt where this app is stored.", True, (255,255,255))
+            auth_message2 = osu_font_small.render("Visit the link, authorize the program, and copy the redirect url.", True, (255,255,255))
+            a_rect = auth_message.get_rect()
+            a_rect2 = auth_message2.get_rect()
+            a_rect.center = (450,150)
+            a_rect2.center = (450,200)
+            screen.blit(auth_message, a_rect)
+            screen.blit(auth_message2, a_rect2)
 
         pygame.display.flip()
 
