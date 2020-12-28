@@ -64,6 +64,29 @@ class Button:
         button_font_rect = button_font.get_rect()
         button_font_rect.center = self.center_coords
         return button_rect, button_font, button_font_rect
+
+
+class Filter:
+    def __init__(self,filter_name,value_range,font_size):
+        self.filter_name = filter_name
+        self.font = pygame.font.Font('resources/Aller_Bd.ttf', font_size)
+        self.low, self.high = value_range
+
+    def create_filter_box(self):
+        surface = pygame.Surface((375,125))
+        surface.set_alpha(100)
+        filter_text = self.font.render(self.filter_name,True,(255,255,255))
+        filter_text_rect = filter_text.get_rect()
+        filter_text_rect.center = (187,30)
+        surface.blit(filter_text,filter_text_rect)
+        bar = pygame.Rect(0,0,220,2)  # bar of the slider object
+        bar.center = (187,70)
+        pygame.draw.rect(surface,(255,255,255),bar,0)
+        return surface
+
+    def create_slider_box(self):
+
+
 #--------------------------------------FUNCTIONALITY--------------------------------------------------------------------
 
 
@@ -262,19 +285,36 @@ def no_access_token_message():
 
 def transition(width,height,copy):
     running = True
-    x = 200
+    so = 400  # starting offset
+    offset = 1
     while running:
         screen.blit(copy,(0,0))
+
+        # all rect. points (could make more efficient?)
+        rect_1_points = ((200-so, 200-so), (350-so, 50-so), (650+offset-so, 350+offset-so), (500+offset-so, 500+offset-so))
+        rect_2_points = ((-100-so, 200-so), (50-so, 50-so), (350+offset-so, 350+offset-so), (200+offset-so, 500+offset-so))
+        rect_3_points = ((500-so, 200-so), (650-so, 50-so), (950+offset-so, 350+offset-so), (800+offset-so, 500+offset-so))
+        rect_4_points = ((800-so, 200-so), (950-so, 50-so), (1250+offset-so, 350+offset-so), (1100+offset-so, 500+offset-so))
+        rect_5_points = ((-400-so, 200-so), (-250-so, 50-so), (50+offset-so, 350+offset-so), (-100+offset-so, 500+offset-so))
+
+        if rect_5_points[2][1] > height + 1000:
+            running = False
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 quit()
-        pygame.draw.rect(screen,(255,255,255), (x,100,100,100),0)
-        x += 1
+
+        pygame.draw.polygon(screen,(252, 186, 3),rect_1_points,0)
+        pygame.draw.polygon(screen,(115, 223, 245),rect_2_points,0)
+        pygame.draw.polygon(screen, (187, 108, 230), rect_3_points, 0)
+        pygame.draw.polygon(screen, (255, 92, 211), rect_4_points, 0)
+        pygame.draw.polygon(screen, (252, 186, 3), rect_5_points, 0)
+
+        offset *= 1.1
 
         # update the screen
         pygame.display.flip()
         clock.tick(120)
-
 
 
 def main_window(width, height):
@@ -357,6 +397,7 @@ def main_window(width, height):
             # check if button pressed
             if success_button_rect.collidepoint(mx,my) and mouse_clicked:
                 transition(width,height,screen.copy())
+                map_window(width,height)
 
         # update screen
         pygame.display.flip()
@@ -389,10 +430,10 @@ def auth_window(width,height):
     while running:
         screen.blit(bg,(0,0))
         mx, my = pygame.mouse.get_pos()
+
         # event listener loop
-        events = pygame.event.get()
         mouse_clicked = False
-        for event in events:
+        for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 quit()
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -425,5 +466,73 @@ def auth_window(width,height):
 
         pygame.display.flip()
         clock.tick(120)
+
+
+def map_window(width, height):
+    # variables whose values are declared once OR at the start only
+    running = True
+    triangles = Triangle.create_triangles(25, width, height)
+    y_offset = 0.2
+
+    # Filter variables
+    length_filter = Filter("Length",(1,10),20).create_filter_box()
+    stars = Filter("Stars",(1,10),20).create_filter_box()
+    ar_filter = Filter("AR",(1,10),20).create_filter_box()
+    bpm_filter = Filter("BPM",(1,10),20).create_filter_box()
+    cs_filter = Filter("CS",(1,10),20).create_filter_box()
+    status_filter = Filter("Status",(1,10),20).create_filter_box()
+
+    y_padding = 40  # determine spacing between Filters
+    y_offset_2 = -40  # move all filters up/down
+
+    # text variables
+    title_text = osu_font.render("Filters", True, (255, 255, 255))
+    title_rect = title_text.get_rect()
+    title_rect.center = (90,45)
+
+    while running:
+        screen.blit(bg,(0,0))
+
+        # event listener
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                quit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_clicked = True
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+
+        # to display mouse coordinates
+        mx, my = pygame.mouse.get_pos()
+        text = osu_font.render(str(mx) + ", " + str(my), True, (255, 255, 255))
+        text_rect = text.get_rect()
+        text_rect.center = (700, 50)
+        screen.blit(text, text_rect)
+
+        # triangle background
+        for triangle, location in triangles:
+            screen.blit(triangle, location)
+            location[1] -= y_offset
+            if location[1] + triangle.get_height() < 0:
+                location[1] = height + 20  # set triangle below screen if past above
+                location[0] = random.randint(50, width - 50)  # set triangle to random x value
+
+        # display title
+        screen.blit(title_text, title_rect)
+
+        # left filters
+        screen.blit(length_filter,(50,150+y_offset_2))
+        screen.blit(stars,(50,275+y_padding+y_offset_2))
+        screen.blit(ar_filter,(50,400+2*y_padding+y_offset_2))
+        # right filters
+        screen.blit(bpm_filter, (50+425, 150 + y_offset_2))
+        screen.blit(cs_filter, (50+425, 275 + y_padding + y_offset_2))
+        screen.blit(status_filter, (50+425, 400 + 2*y_padding + y_offset_2))
+
+
+        pygame.display.flip()
+        clock.tick(FPS)
+
 
 main_window(W,H)
