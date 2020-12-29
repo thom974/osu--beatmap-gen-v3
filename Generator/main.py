@@ -449,7 +449,7 @@ def auth_window(width,height):
     fetched_user_auth_link = fetch_access_token(fetch_auth_link=True)
     auth_message = osu_font_small.render("Locate resources/auth_link.txt where this app is stored.", True,(255, 255, 255))
     auth_message2 = osu_font_small.render("Visit the link, authorize the program, and copy the entire URL once you get redirected.", True,(255, 255, 255))
-    auth_message3 = osu_font_small.render("Replace the authorization link in auth_link.txt with that URL. Make sure it is the only line in that file.",True, (255, 255, 255))
+    auth_message3 = osu_font_small.render("Place the authorization link in redirect_link.txt. Make sure it is the only line in that file.",True, (255, 255, 255))
     a_rect = auth_message.get_rect()
     a_rect2 = auth_message2.get_rect()
     a_rect3 = auth_message3.get_rect()
@@ -615,6 +615,5 @@ def map_window(width, height):
 
         pygame.display.flip()
         clock.tick(FPS)
-
 
 main_window(W,H)
