@@ -87,34 +87,40 @@ class Filter:
         pygame.draw.rect(surface,(255,255,255),bar,0)
         return surface
 
-    def create_slider_box(self,mouse_pos,clicked,left_max, right_max):
+    def create_slider_box(self,mouse_pos,clicked,left_max, right_max, **kwargs):
         mx, my = mouse_pos
-        lst = []
         box_rect = pygame.Rect(0,0,12,30)
         box_rect.center = self.slider_box_center
+
+        slider_location = self.slider_box_center[0] - left_max  # will always return a value from 0 - 200
+        slider_location = slider_location if slider_location > 0 else 0
+        # code for filter value (e.g stars = 7.1)
+        if 'items' not in kwargs:
+            to_format = "%." + str(self.deci_places) + "f"
+            val = slider_location / (200 / self.segments)
+            value_text = self.font.render(to_format % val, True, (255, 255, 255))
+        else:  # solely for 'status' filter
+            value_text = None
+            statuses = kwargs['items']
+            to_format = "%s"
+            val = statuses[int(slider_location // 28.57)] if int(slider_location // 28.57) != 7 else 'any'
+            value_text = self.font.render(to_format % val, True, (255, 255, 255))
+
+        value_text_rect = value_text.get_rect()
+        surface = pygame.Surface((value_text_rect.width, value_text_rect.height))
+        surface.blit(value_text, value_text_rect)
+        surface.set_colorkey((0, 0, 0))
 
         # code for sliding the box
         if box_rect.collidepoint(mx,my) and clicked:
             if not self.slider_box_center[0] < left_max and not self.slider_box_center[0] > right_max:
-                slider_location = self.slider_box_center[0] - left_max  # will always return a value from 0 - 200
                 self.slider_box_center[0] = mx  # add some sort of offset later to improve
-
-                # code for filter value (e.g stars = 7.1)
-                to_format = "%." + str(self.deci_places) + "f"
-                val = slider_location/(200/self.segments)
-
-                value_text = self.font.render(to_format % val, True, (255,255,255))
-                value_text_rect = value_text.get_rect()
-                surface = pygame.Surface((value_text_rect.width, value_text_rect.height))
-                surface.blit(value_text,value_text_rect)
-                lst.append(surface)
-
             else:
-                self.slider_box_center[0] += 1 if self.slider_box_center[0] <= left_max else -1
+                self.slider_box_center[0] += 1 if self.slider_box_center[0] - 6 < left_max else -1
 
         # determine value depending on location of slider
 
-        return box_rect
+        return [box_rect,surface]
 
 #--------------------------------------FUNCTIONALITY--------------------------------------------------------------------
 
@@ -571,23 +577,41 @@ def map_window(width, height):
 
         # left filters
         screen.blit(length_filter_box,(50,150+y_offset_2))
-        pygame.draw.rect(screen,(255,255,255),length_filter.create_slider_box((mx,my),mouse_one_pressed,135,335))
+        length_slider_info = length_filter.create_slider_box((mx,my),mouse_one_pressed,135,335)
+        length_slider_obj, length_val = length_slider_info[0], length_slider_info[1]
+        pygame.draw.rect(screen,(255,255,255),length_slider_obj)
+        screen.blit(length_val,(235 - length_val.get_width()//2, 212 - length_val.get_height()//2))
 
         screen.blit(stars_filter_box,(50,275+y_padding+y_offset_2))
-        pygame.draw.rect(screen,(255,255,255),stars_filter.create_slider_box((mx,my),mouse_one_pressed,135,335))
+        stars_slider_info = stars_filter.create_slider_box((mx,my),mouse_one_pressed,135,335)
+        stars_slider_obj, stars_val = stars_slider_info[0], stars_slider_info[1]
+        pygame.draw.rect(screen,(255,255,255),stars_slider_obj)
+        screen.blit(stars_val,(235 - stars_val.get_width()//2, 377 - stars_val.get_height()//2))
 
         screen.blit(ar_filter_box,(50,400+2*y_padding+y_offset_2))
-        pygame.draw.rect(screen,(255,255,255),ar_filter.create_slider_box((mx,my),mouse_one_pressed,135,335))
+        ar_slider_info = ar_filter.create_slider_box((mx, my), mouse_one_pressed, 135, 335)
+        ar_slider_obj, ar_val = ar_slider_info[0], ar_slider_info[1]
+        pygame.draw.rect(screen, (255, 255, 255), ar_slider_obj)
+        screen.blit(ar_val, (235 - ar_val.get_width() // 2, 542 - ar_val.get_height() // 2))
 
         # right filters
         screen.blit(bpm_filter_box, (50+425, 150 + y_offset_2))
-        pygame.draw.rect(screen,(255,255,255),bpm_filter.create_slider_box((mx,my),mouse_one_pressed,560,760))
+        bpm_slider_info = bpm_filter.create_slider_box((mx,my),mouse_one_pressed,560,760)
+        bpm_slider_obj, bpm_val = bpm_slider_info[0], bpm_slider_info[1]
+        pygame.draw.rect(screen,(255,255,255),bpm_slider_obj)
+        screen.blit(bpm_val, (660 - bpm_val.get_width() // 2, 212 - bpm_val.get_height() // 2))
 
         screen.blit(cs_filter_box, (50+425, 275 + y_padding + y_offset_2))
-        pygame.draw.rect(screen, (255, 255, 255), cs_filter.create_slider_box((mx, my), mouse_one_pressed, 560, 760))
+        cs_slider_info = cs_filter.create_slider_box((mx, my), mouse_one_pressed, 560, 760)
+        cs_slider_obj, cs_val = cs_slider_info[0], cs_slider_info[1]
+        pygame.draw.rect(screen, (255, 255, 255), cs_slider_obj)
+        screen.blit(cs_val, (660 - bpm_val.get_width() // 2, 377 - cs_val.get_height() // 2))
 
         screen.blit(status_filter_box, (50+425, 400 + 2*y_padding + y_offset_2))
-        pygame.draw.rect(screen, (255, 255, 255), status_filter.create_slider_box((mx, my), mouse_one_pressed, 560, 760))
+        status_slider_info = status_filter.create_slider_box((mx, my), mouse_one_pressed, 560, 760, items=['ranked','qualified','loved','pending','wip','graveyard','any'])
+        status_slider_obj, status_val = status_slider_info[0], status_slider_info[1]
+        pygame.draw.rect(screen, (255, 255, 255), status_slider_obj)
+        screen.blit(status_val, (660 - status_val.get_width() // 2, 542 - status_val.get_height() // 2))
 
         pygame.display.flip()
         clock.tick(FPS)
