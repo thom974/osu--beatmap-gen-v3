@@ -67,10 +67,13 @@ class Button:
 
 
 class Filter:
-    def __init__(self,filter_name,value_range,font_size):
+    def __init__(self,filter_name,value_range,font_size,num_of_values,decimals):
         self.filter_name = filter_name
         self.font = pygame.font.Font('resources/Aller_Bd.ttf', font_size)
         self.low, self.high = value_range
+        self.slider_box_center = []
+        self.segments = num_of_values
+        self.deci_places = decimals
 
     def create_filter_box(self):
         surface = pygame.Surface((375,125))
@@ -84,8 +87,34 @@ class Filter:
         pygame.draw.rect(surface,(255,255,255),bar,0)
         return surface
 
-    def create_slider_box(self):
+    def create_slider_box(self,mouse_pos,clicked,left_max, right_max):
+        mx, my = mouse_pos
+        lst = []
+        box_rect = pygame.Rect(0,0,12,30)
+        box_rect.center = self.slider_box_center
 
+        # code for sliding the box
+        if box_rect.collidepoint(mx,my) and clicked:
+            if not self.slider_box_center[0] < left_max and not self.slider_box_center[0] > right_max:
+                slider_location = self.slider_box_center[0] - left_max  # will always return a value from 0 - 200
+                self.slider_box_center[0] = mx  # add some sort of offset later to improve
+
+                # code for filter value (e.g stars = 7.1)
+                to_format = "%." + str(self.deci_places) + "f"
+                val = slider_location/(200/self.segments)
+
+                value_text = self.font.render(to_format % val, True, (255,255,255))
+                value_text_rect = value_text.get_rect()
+                surface = pygame.Surface((value_text_rect.width, value_text_rect.height))
+                surface.blit(value_text,value_text_rect)
+                lst.append(surface)
+
+            else:
+                self.slider_box_center[0] += 1 if self.slider_box_center[0] <= left_max else -1
+
+        # determine value depending on location of slider
+
+        return box_rect
 
 #--------------------------------------FUNCTIONALITY--------------------------------------------------------------------
 
@@ -475,12 +504,29 @@ def map_window(width, height):
     y_offset = 0.2
 
     # Filter variables
-    length_filter = Filter("Length",(1,10),20).create_filter_box()
-    stars = Filter("Stars",(1,10),20).create_filter_box()
-    ar_filter = Filter("AR",(1,10),20).create_filter_box()
-    bpm_filter = Filter("BPM",(1,10),20).create_filter_box()
-    cs_filter = Filter("CS",(1,10),20).create_filter_box()
-    status_filter = Filter("Status",(1,10),20).create_filter_box()
+    length_filter = Filter("Length",(1,10),20,30,1)
+    length_filter_box = length_filter.create_filter_box()
+    length_filter.slider_box_center = [235,180]
+
+    stars_filter = Filter("Stars",(1,10),20,10,2)
+    stars_filter_box = stars_filter.create_filter_box()
+    stars_filter.slider_box_center = [235,345]
+
+    ar_filter = Filter("AR",(1,10),20,10,1)
+    ar_filter_box = ar_filter.create_filter_box()
+    ar_filter.slider_box_center = [235,510]
+
+    bpm_filter = Filter("BPM",(1,10),20,300,0)
+    bpm_filter_box = bpm_filter.create_filter_box()
+    bpm_filter.slider_box_center = [660,180]
+
+    cs_filter = Filter("CS",(1,10),20,7,1)
+    cs_filter_box = cs_filter.create_filter_box()
+    cs_filter.slider_box_center = [660,345]
+
+    status_filter = Filter("Status",(1,10),20,10,1)
+    status_filter_box = status_filter.create_filter_box()
+    status_filter.slider_box_center = [660,510]
 
     y_padding = 40  # determine spacing between Filters
     y_offset_2 = -40  # move all filters up/down
@@ -494,6 +540,8 @@ def map_window(width, height):
         screen.blit(bg,(0,0))
 
         # event listener
+        mouse_clicked = False
+        mouse_one_pressed = pygame.mouse.get_pressed(num_buttons=3)[0]
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 quit()
@@ -522,14 +570,24 @@ def map_window(width, height):
         screen.blit(title_text, title_rect)
 
         # left filters
-        screen.blit(length_filter,(50,150+y_offset_2))
-        screen.blit(stars,(50,275+y_padding+y_offset_2))
-        screen.blit(ar_filter,(50,400+2*y_padding+y_offset_2))
-        # right filters
-        screen.blit(bpm_filter, (50+425, 150 + y_offset_2))
-        screen.blit(cs_filter, (50+425, 275 + y_padding + y_offset_2))
-        screen.blit(status_filter, (50+425, 400 + 2*y_padding + y_offset_2))
+        screen.blit(length_filter_box,(50,150+y_offset_2))
+        pygame.draw.rect(screen,(255,255,255),length_filter.create_slider_box((mx,my),mouse_one_pressed,135,335))
 
+        screen.blit(stars_filter_box,(50,275+y_padding+y_offset_2))
+        pygame.draw.rect(screen,(255,255,255),stars_filter.create_slider_box((mx,my),mouse_one_pressed,135,335))
+
+        screen.blit(ar_filter_box,(50,400+2*y_padding+y_offset_2))
+        pygame.draw.rect(screen,(255,255,255),ar_filter.create_slider_box((mx,my),mouse_one_pressed,135,335))
+
+        # right filters
+        screen.blit(bpm_filter_box, (50+425, 150 + y_offset_2))
+        pygame.draw.rect(screen,(255,255,255),bpm_filter.create_slider_box((mx,my),mouse_one_pressed,560,760))
+
+        screen.blit(cs_filter_box, (50+425, 275 + y_padding + y_offset_2))
+        pygame.draw.rect(screen, (255, 255, 255), cs_filter.create_slider_box((mx, my), mouse_one_pressed, 560, 760))
+
+        screen.blit(status_filter_box, (50+425, 400 + 2*y_padding + y_offset_2))
+        pygame.draw.rect(screen, (255, 255, 255), status_filter.create_slider_box((mx, my), mouse_one_pressed, 560, 760))
 
         pygame.display.flip()
         clock.tick(FPS)
