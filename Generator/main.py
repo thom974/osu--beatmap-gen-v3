@@ -11,11 +11,12 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 import time
 import random
+import os
+from threading import Thread
 import pygame_textinput
 
 starting_time = time.time()
 #------------------------------------------------------CLASSES----------------------------------------------------------
-
 
 class Triangle:
     def __init__(self, left_corner, side_length, colour):
@@ -94,13 +95,16 @@ class Filter:
 
         slider_location = self.slider_box_center[0] - left_max  # will always return a value from 0 - 200
         slider_location = slider_location if slider_location > 0 else 0
+
         # code for filter value (e.g stars = 7.1)
         if 'items' not in kwargs:
-            to_format = "%." + str(self.deci_places) + "f"
-            val = slider_location / (200 / self.segments)
+            if self.filter_name != "CS":
+                to_format = "> %." + str(self.deci_places) + "f"
+            else:
+                to_format = "< %." + str(self.deci_places) + "f"
+            val = round(slider_location / (200 / self.segments), self.deci_places)
             value_text = self.font.render(to_format % val, True, (255, 255, 255))
         else:  # solely for 'status' filter
-            value_text = None
             statuses = kwargs['items']
             to_format = "%s"
             val = statuses[int(slider_location // 28.57)] if int(slider_location // 28.57) != 7 else 'any'
@@ -120,10 +124,22 @@ class Filter:
 
         # determine value depending on location of slider
 
-        return [box_rect,surface]
+        return [box_rect,surface,val]
+
+
+class Backend(Thread):
+    def __init__(self, filter_dict):
+        super().__init__()
+        self.filters = filter_dict
+        print(self.filters)
+
+    def run(self):
+        users_maps = fetch_maps(100)
+        maps = fetch_new_maps(users_maps, self.filters)
+        download_maps(maps)
+        print(time.time() - starting_time, "seconds")
 
 #--------------------------------------FUNCTIONALITY--------------------------------------------------------------------
-
 
 def return_sc(driver):
     return driver.page_source
@@ -142,7 +158,7 @@ def fetch_maps(num):
     xpath = "//main[@class]//a[@class='id']"
     desired_map_count = num
 
-    driver = webdriver.Chrome('C:\Program Files (x86)\chromedriver.exe')
+    driver = webdriver.Chrome('resources\chromedriver.exe')
     driver.get('https://bloodcat.com/osu/?q=&c=b&m=0&s=&g=&l=')
 
     while len(generated_maps) < desired_map_count:
@@ -279,19 +295,45 @@ def download_maps(lst):
         urllib.request.urlretrieve(url, osu_path + '/' + filename)
         print("finished downloading", str(index+1), "map(s)! (" + filename + ")")
 
-# fetch_access_token()
-# users_maps = fetch_maps(100)
-# filters = {'len':60,
-#            'stars':6,
-#            'ar':9,
-#            'bpm':130,
-#            'cs':4.2,
-#            'status': 'any'
-#            }
-# maps = fetch_new_maps(users_maps,filters)
-# download_maps(maps)
-print(time.time() - starting_time, "seconds")
 
+# function for drawing wrapped text, not my own
+def draw_text(surface, text, color, rect, font, aa=False, bkg=None):
+    rect = pygame.Rect(rect)
+    y = rect.top
+    lineSpacing = 1
+
+    # get the height of the font
+    fontHeight = font.size("Tg")[1]
+
+    while text:
+        i = 1
+
+        # determine if the row of text will be outside our area
+        if y + fontHeight > rect.bottom:
+            break
+
+        # determine maximum width of line
+        while font.size(text[:i])[0] < rect.width and i < len(text):
+            i += 1
+
+        # if we've wrapped the text, then adjust the wrap to the last word
+        if i < len(text):
+            i = text.rfind(" ", 0, i) + 1
+
+        # render the line and blit it to the surface
+        if bkg:
+            image = font.render(text[:i], 1, color, bkg)
+            image.set_colorkey(bkg)
+        else:
+            image = font.render(text[:i], aa, color)
+
+        surface.blit(image, (rect.left, y))
+        y += fontHeight + lineSpacing
+
+        # remove the text we just blitted
+        text = text[i:]
+
+    return text
 #----------------------------------------PYGAME GUI---------------------------------------------------------------------
 # set up pygame
 pygame.init()
@@ -404,12 +446,12 @@ def main_window(width, height):
                 location[1] = height + 20  # set triangle below screen if past above
                 location[0] = random.randint(50,width-50)  # set triangle to random x value
 
-        # to display mouse coordinates
+        # # to display mouse coordinates
         mx, my = pygame.mouse.get_pos()
-        text = osu_font.render(str(mx) + ", " + str(my), True, (255,255,255))
-        text_rect = text.get_rect()
-        text_rect.center = (100,100)
-        screen.blit(text,text_rect)
+        # text = osu_font.render(str(mx) + ", " + str(my), True, (255,255,255))
+        # text_rect = text.get_rect()
+        # text_rect.center = (100,100)
+        # screen.blit(text,text_rect)
 
         # display title
         screen.blit(title_text,title_rect)
@@ -556,13 +598,25 @@ def map_window(width, height):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+                    main_window(width,height)
+                if event.key == pygame.K_RETURN and 'status_slider_info' in locals():
+                    running = False
+                    values = {
+                            "Length": length_slider_info[2],
+                            "Stars": stars_slider_info[2],
+                            "AR": ar_slider_info[2],
+                            "BPM": bpm_slider_info[2],
+                            "CS": cs_slider_info[2],
+                            "Status": status_slider_info[2]
+                              }
+                    download_window(width,height,values)
 
-        # to display mouse coordinates
+        # # to display mouse coordinates
         mx, my = pygame.mouse.get_pos()
-        text = osu_font.render(str(mx) + ", " + str(my), True, (255, 255, 255))
-        text_rect = text.get_rect()
-        text_rect.center = (700, 50)
-        screen.blit(text, text_rect)
+        # text = osu_font.render(str(mx) + ", " + str(my), True, (255, 255, 255))
+        # text_rect = text.get_rect()
+        # text_rect.center = (700, 50)
+        # screen.blit(text, text_rect)
 
         # triangle background
         for triangle, location in triangles:
@@ -612,6 +666,108 @@ def map_window(width, height):
         status_slider_obj, status_val = status_slider_info[0], status_slider_info[1]
         pygame.draw.rect(screen, (255, 255, 255), status_slider_obj)
         screen.blit(status_val, (660 - status_val.get_width() // 2, 542 - status_val.get_height() // 2))
+
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
+def download_window(width, height,filter_values):
+    running = True
+    triangles = Triangle.create_triangles(25, width, height)
+    y_offset = 0.2
+
+    # load warning sign
+    warning_surface = pygame.image.load('resources/Images/warning.png')
+    warning_surface = pygame.transform.scale(warning_surface,(80,75))
+    warning_surface.set_colorkey((0,0,0))
+
+    # create text for filter box
+    info_text = osu_font_small.render("These are your filters. If you want to go back and change them, hit ESCAPE.", True,
+                                (255, 255, 255))
+    info_text_rect = info_text.get_rect()
+    info_text_rect.center = (450, 60)
+
+    # to display filter values box
+    filters_surface = pygame.Surface((540,44))
+    filters_str = ", ".join('='.join((key,str(val))) for (key,val) in filter_values.items())
+    filters_text = osu_font_small.render(filters_str, True, (255, 255, 255))
+    filters_text_rect = filters_text.get_rect()
+    filters_text_rect.center = (540 // 2, 44 // 2)
+    filters_surface.blit(filters_text,filters_text_rect)
+    filters_surface.set_alpha(100)
+
+    # create text for instructions
+    instruc_str = "This program uses ChromeDriver. Visit the official page and download the appropriate version (according to your Chrome version.)"
+    instruc_text_rect = pygame.Rect(0,0,400,100)
+    instruc_text_rect.center = (515, 250)
+
+    instruc_text_2 = osu_font_small.render("Once installed, place chromedriver.exe into the resources folder.",True,(255,255,255))
+    instruc_text_2_rect = instruc_text_2.get_rect()
+    instruc_text_2_rect.center = (450,350)
+
+    # proceed button
+    proceed_button = Button((450, 485), (80, 32), (51, 57, 84), osu_font)
+    proceed_button.text = ">>>"
+    proceed_rect, proceed_font, proceed_font_rect = proceed_button.create_button_elements()
+
+    while running:
+        screen.blit(bg, (0, 0))
+        chromedriver_found = os.path.exists('resources\chromedriver.exe')
+        mx, my = pygame.mouse.get_pos()
+
+        # event listener
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                quit()
+            if event.type == pygame.MOUSEBUTTONDOWN and chromedriver_found and proceed_rect.collidepoint(mx,my):
+                # running = False
+                start = Backend(filter_values)
+                start.start()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                    map_window(width,height)
+                if event.key == pygame.K_RETURN:
+                    pass
+
+        # # to display mouse coordinates
+        # text = osu_font.render(str(mx) + ", " + str(my), True, (255, 255, 255))
+        # text_rect = text.get_rect()
+        # text_rect.center = (700, 50)
+        # screen.blit(text, text_rect)
+
+        # triangle background
+        for triangle, location in triangles:
+            screen.blit(triangle, location)
+            location[1] -= y_offset
+            if location[1] + triangle.get_height() < 0:
+                location[1] = height + 20  # set triangle below screen if past above
+                location[0] = random.randint(50, width - 50)  # set triangle to random x value
+
+        # text variables
+        screen.blit(filters_surface,(450 - 540 // 2, 115 - 44 // 2))
+        screen.blit(info_text,info_text_rect)
+        screen.blit(warning_surface,(250 - warning_surface.get_width() // 2, 225 - warning_surface.get_height() // 2))
+        draw_text(screen,instruc_str,(255, 255, 255),instruc_text_rect, osu_font_small, aa=True)
+        screen.blit(instruc_text_2,instruc_text_2_rect)
+
+        # chromedriver status
+        status_colour = pygame.Surface((110,44))
+
+        if chromedriver_found:
+            status_colour.fill((20, 201, 75))  # green colour
+            found_text = osu_font_small.render("Found!", True, (255, 255, 255))
+            pygame.draw.rect(screen,(255,255,255),proceed_rect)
+            screen.blit(proceed_font,proceed_font_rect)
+        else:
+            status_colour.fill((196, 20, 67))
+            found_text = osu_font_small.render("Not found.", True, (255, 255, 255))
+
+        found_text_rect = found_text.get_rect()
+        found_text_rect.center = (55,22)
+        status_colour.blit(found_text,found_text_rect)
+        status_colour.set_alpha(150)
+        screen.blit(status_colour,(450 - 110 // 2, 410 - 44 // 2))
 
         pygame.display.flip()
         clock.tick(FPS)
