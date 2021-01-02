@@ -134,12 +134,13 @@ class Backend(Thread):
         print(self.filters)
 
     def run(self):
-        users_maps = fetch_maps(100)
+        users_maps = fetch_maps(1000)
         maps = fetch_new_maps(users_maps, self.filters)
         download_maps(maps)
         print(time.time() - starting_time, "seconds")
 
 #--------------------------------------FUNCTIONALITY--------------------------------------------------------------------
+
 
 def return_sc(driver):
     return driver.page_source
@@ -155,18 +156,18 @@ def has_access_token():
 
 def fetch_maps(num):
     generated_maps = []  # store all maps, format type unknown for now
-    xpath = "//main[@class]//a[@class='id']"
+    xpath = ".//div[@data-id]"
     desired_map_count = num
 
     driver = webdriver.Chrome('resources\chromedriver.exe')
-    driver.get('https://bloodcat.com/osu/?q=&c=b&m=0&s=&g=&l=')
+    driver.get('https://beatconnect.io/')
 
     while len(generated_maps) < desired_map_count:
         WebDriverWait(driver, timeout=5).until(return_sc)
         map_str = driver.find_elements_by_xpath(xpath)
 
         for beatmap in map_str:
-            map_id = beatmap.get_attribute('text')
+            map_id = beatmap.get_attribute('data-id')
 
             if map_id not in generated_maps:
                 generated_maps.append(map_id)
