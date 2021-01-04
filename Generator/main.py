@@ -18,6 +18,7 @@ import pygame_textinput
 starting_time = time.time()
 #------------------------------------------------------CLASSES----------------------------------------------------------
 
+
 class Triangle:
     def __init__(self, left_corner, side_length, colour):
         self.starting_location = [random.randint(0,W), random.randint(0,H)]
@@ -131,10 +132,9 @@ class Backend(Thread):
     def __init__(self, filter_dict):
         super().__init__()
         self.filters = filter_dict
-        print(self.filters)
 
     def run(self):
-        users_maps = fetch_maps(1000)
+        users_maps = fetch_maps(100)
         maps = fetch_new_maps(users_maps, self.filters)
         download_maps(maps)
         print(time.time() - starting_time, "seconds")
@@ -275,6 +275,7 @@ def fetch_new_maps(lst,map_filters):
 
     for map_id in maps_to_filter:
         beatmapset_info = requests.get("https://osu.ppy.sh/api/v2/beatmapsets/" + str(map_id), headers=token_header).json()
+        print(beatmapset_info)
         beatmapset_diffs = beatmapset_info['beatmaps']  # holds all difficulties of the map set
 
         diff_star_ratings = [dct['difficulty_rating'] for dct in beatmapset_diffs]  # holds the star rating of each diff
@@ -289,10 +290,11 @@ def fetch_new_maps(lst,map_filters):
 def download_maps(lst):
     osu_path = input("Enter the path location to your Songs! folder:").replace("\\","/")
     for index, beatmap in enumerate(lst):
-        url = "https://bloodcat.com/osu/s/" + str(beatmap)
+        url = "http://beatconnect.io/b/" + str(beatmap)
         req = urllib.request.Request(url, method='HEAD')
         r = urllib.request.urlopen(req)
         filename = urllib.parse.unquote(r.info().get_filename())  # decode the encoded non ASCII chars (e.g !)
+        print(filename)
         urllib.request.urlretrieve(url, osu_path + '/' + filename)
         print("finished downloading", str(index+1), "map(s)! (" + filename + ")")
 
@@ -603,12 +605,12 @@ def map_window(width, height):
                 if event.key == pygame.K_RETURN and 'status_slider_info' in locals():
                     running = False
                     values = {
-                            "Length": length_slider_info[2],
-                            "Stars": stars_slider_info[2],
-                            "AR": ar_slider_info[2],
-                            "BPM": bpm_slider_info[2],
-                            "CS": cs_slider_info[2],
-                            "Status": status_slider_info[2]
+                            "len": length_slider_info[2],
+                            "stars": stars_slider_info[2],
+                            "ar": ar_slider_info[2],
+                            "bpm": bpm_slider_info[2],
+                            "cs": cs_slider_info[2],
+                            "status": status_slider_info[2]
                               }
                     download_window(width,height,values)
 
