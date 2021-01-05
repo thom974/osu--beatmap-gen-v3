@@ -128,14 +128,16 @@ class Filter:
 
 
 class Backend(Thread):
-    def __init__(self, filter_dict):
+    def __init__(self, filter_dict,direc,num):
         super().__init__()
         self.filters = filter_dict
+        self.map_count = num
+        self.directory = direc
 
     def run(self):
-        users_maps = fetch_maps(100)
+        users_maps = fetch_maps(self.map_count)
         maps = fetch_new_maps(users_maps, self.filters)
-        download_maps(maps)
+        download_maps(maps,self.directory)
         print(time.time() - starting_time, "seconds")
 
 
@@ -147,7 +149,7 @@ def return_sc(driver):
 
 
 def has_access_token():
-    with open('resources/access_token.txt', 'r') as f:
+    with open('user_files/access_token.txt', 'r') as f:
         access_token = f.readline().rstrip("\n")
 
     token_header = {'Authorization': 'Bearer ' + access_token}
@@ -164,7 +166,7 @@ def fetch_maps(num):
     xpath = ".//div[@data-id]"
     desired_map_count = num
 
-    driver = webdriver.Chrome('resources\chromedriver.exe')
+    driver = webdriver.Chrome('user_files\chromedriver.exe')
     driver.get('https://beatconnect.io/')
 
     while len(generated_maps) < desired_map_count:
@@ -196,13 +198,13 @@ def fetch_access_token(**kwargs):
     # from the response object, grab url
     if kwargs.get('fetch_auth_link') and kwargs['fetch_auth_link']:
         constructed_url = requests.get('https://osu.ppy.sh/oauth/authorize', params=req_user_perm).url
-        with open('resources/auth_link.txt', 'w') as f:
+        with open('user_files/auth_link.txt', 'w') as f:
             f.write(constructed_url)
         return True
 
     # fetch the auth_token from redirected URL
     if kwargs.get('code_passed') and kwargs['code_passed']:
-        with open('resources/redirect_link.txt', 'r') as f:
+        with open('user_files/redirect_link.txt', 'r') as f:
             code_for_auth = f.readline().split("=")[1].rstrip("\n")
 
         # fetch authorization token
@@ -219,7 +221,7 @@ def fetch_access_token(**kwargs):
         except IndexError:
             return False
 
-        with open('resources/access_token.txt', 'w') as f:
+        with open('user_files/access_token.txt', 'w') as f:
             f.write(access_token)
 
         return True
@@ -278,7 +280,7 @@ def fetch_new_maps(lst, map_filters):
     maps_to_filter = lst
     new_maps = []
 
-    with open('resources/access_token.txt', 'r') as f:
+    with open('user_files/access_token.txt', 'r') as f:
         access_token = f.readline().rstrip("\n")
     token_header = {'Authorization': 'Bearer ' + access_token}
 
@@ -297,8 +299,9 @@ def fetch_new_maps(lst, map_filters):
     return new_maps
 
 
-def download_maps(lst):
-    osu_path = input("Enter the path location to your Songs! folder:").replace("\\", "/")
+def download_maps(lst,direc):
+    print("this is the lst of beatmaps found", lst)
+    osu_path = direc
     for index, beatmap in enumerate(lst):
         url = "http://beatconnect.io/b/" + str(beatmap)
         req = urllib.request.Request(url, method='HEAD')
@@ -519,7 +522,7 @@ def auth_window(width, height):
 
     # variables for text instructions on how to authorize
     fetched_user_auth_link = fetch_access_token(fetch_auth_link=True)
-    auth_message = osu_font_small.render("Locate resources/auth_link.txt where this app is stored.", True,
+    auth_message = osu_font_small.render("Locate user_files/auth_link.txt where this app is stored.", True,
                                          (255, 255, 255))
     auth_message2 = osu_font_small.render(
         "Visit the link, authorize the program, and copy the entire URL once you get redirected.", True,
@@ -740,7 +743,7 @@ def download_window(width, height, filter_values):
     instruc_text_rect = pygame.Rect(0, 0, 400, 100)
     instruc_text_rect.center = (515, 250)
 
-    instruc_text_2 = osu_font_small.render("Once installed, place chromedriver.exe into the resources folder.", True,
+    instruc_text_2 = osu_font_small.render("Once installed, place chromedriver.exe into the user_files folder.", True,
                                            (255, 255, 255))
     instruc_text_2_rect = instruc_text_2.get_rect()
     instruc_text_2_rect.center = (450, 350)
@@ -752,7 +755,7 @@ def download_window(width, height, filter_values):
 
     while running:
         screen.blit(bg, (0, 0))
-        chromedriver_found = os.path.exists('resources\chromedriver.exe')
+        chromedriver_found = os.path.exists('user_files\chromedriver.exe')
         mx, my = pygame.mouse.get_pos()
 
         # event listener
@@ -761,7 +764,7 @@ def download_window(width, height, filter_values):
                 quit()
             if event.type == pygame.MOUSEBUTTONDOWN and chromedriver_found and proceed_rect.collidepoint(mx, my):
                 running = False
-                progress_window(width, height)
+                progress_window(width, height,filter_values)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
@@ -812,16 +815,35 @@ def download_window(width, height, filter_values):
         clock.tick(FPS)
 
 
-def progress_window(width,height):
+def progress_window(width,height,dct):
     # variables whose values are declared once OR at the start only
     running = True
+    filter_vals = dct
     triangles = Triangle.create_triangles(25, width, height)
     y_offset = 0.2
 
     # map count slider bar
     count_filter = Filter("Number of Maps", (1, 10), 20, 1000, 0)
     count_filter_box = count_filter.create_filter_box()
-    count_filter.slider_box_center = [450, 190]
+    count_filter.slider_box_center = [450, 140]
+
+    # directory instructions and note
+    directory_str = "Paste the directory of your osu! Songs folder into songs_directory.txt in user_files."
+    directory_text = osu_font_small.render(directory_str,True,(255,255,255))
+    directory_text_rect = directory_text.get_rect()
+    directory_text_rect.center = (450,245)
+    example_str = "Example: C:\\Users\\accent\\AppData\\Local\\osu!\\Songs"
+    example_text = osu_font_small.render("Make sure there is no slash at the end. " + example_str,True,(255,255,255))
+    example_text_rect = example_text.get_rect()
+    example_text_rect.center = (450,285)
+    note_text = osu_font.render("NOTE: The download will start once you press the button!",True,(140, 139, 137))
+    note_text_rect = note_text.get_rect()
+    note_text_rect.center = (450,515)
+
+    # proceed button
+    proceed_button = Button((450, 415), (80, 32), (51, 57, 84), osu_font)
+    proceed_button.text = ">>>"
+    proceed_rect, proceed_font, proceed_font_rect = proceed_button.create_button_elements()
 
     while running:
         screen.blit(bg,(0,0))
@@ -838,13 +860,19 @@ def progress_window(width,height):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+                    download_window(width,height,filter_vals)
 
-        # # display mouse pos
-        # mx, my = pygame.mouse.get_pos()
-        # text = osu_font.render(str(mx) + ", " + str(my), True, (255, 255, 255))
-        # text_rect = text.get_rect()
-        # text_rect.center = (100, 100)
-        # screen.blit(text, text_rect)
+        # display mouse pos
+        mx, my = pygame.mouse.get_pos()
+        text = osu_font.render(str(mx) + ", " + str(my), True, (255, 255, 255))
+        text_rect = text.get_rect()
+        text_rect.center = (100, 100)
+        screen.blit(text, text_rect)
+
+        # code to read songs_directory.txt
+        with open('user_files/songs_directory.txt','r') as f:
+            directory = f.readline().rstrip("\n")
+            directory_found = False if directory == "" else True
 
         # triangle background
         for triangle, location in triangles:
@@ -855,14 +883,73 @@ def progress_window(width,height):
                 location[0] = random.randint(50, width - 50)  # set triangle to random x value
 
         # map count slider bar
-        screen.blit(count_filter_box, (450 - count_filter_box.get_width() // 2, 180 - count_filter_box.get_height() // 2))
+        screen.blit(count_filter_box, (450 - count_filter_box.get_width() // 2, 130 - count_filter_box.get_height() // 2))
         count_slider_info = count_filter.create_slider_box((mx, my), mouse_one_pressed, 350, 550)
         count_slider_obj, count_val = count_slider_info[0], count_slider_info[1]
         pygame.draw.rect(screen, (255, 255, 255), count_slider_obj)
-        screen.blit(count_val, (450 - count_val.get_width() // 2, 220 - count_val.get_height() // 2))
+        screen.blit(count_val, (450 - count_val.get_width() // 2, 170 - count_val.get_height() // 2))
+
+        # text for instructions
+        screen.blit(directory_text,directory_text_rect)
+        screen.blit(example_text,example_text_rect)
+        screen.blit(note_text,note_text_rect)
+
+        # detect if directory has been pasted
+        status_colour = pygame.Surface((110, 44))
+
+        if directory_found:
+            with open('user_files/songs_directory.txt') as f:
+                directory = f.readline().rstrip("\n")
+
+            status_colour.fill((20, 201, 75))  # green colour
+            found_text = osu_font_small.render("Found!", True, (255, 255, 255))
+            pygame.draw.rect(screen, (255, 255, 255), proceed_rect)
+            screen.blit(proceed_font, proceed_font_rect)
+        else:
+            status_colour.fill((196, 20, 67))
+            found_text = osu_font_small.render("Not found.", True, (255, 255, 255))
+
+        found_text_rect = found_text.get_rect()
+        found_text_rect.center = (55, 22)
+        status_colour.blit(found_text, found_text_rect)
+        status_colour.set_alpha(150)
+        screen.blit(status_colour, (450 - 110 // 2, 350 - 44 // 2))
+
+        if proceed_rect.collidepoint(mx,my) and mouse_clicked:
+            running = False
+            downloading_window(width,height,filter_vals,count_slider_info[2],directory)
 
         pygame.display.flip()
+        clock.tick(120)
+
+
+def downloading_window(width,height,filters,num,direc):
+    thread = Backend(filters,direc,num)
+    thread.start()  # start the 'backend'
+    triangles = Triangle.create_triangles(25, width, height)
+    y_offset = 0.2
+
+    running = True
+    while running:
+        screen.fill((255,255,255))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+
+        for triangle, location in triangles:
+            screen.blit(triangle, location)
+            location[1] -= y_offset
+            if location[1] + triangle.get_height() < 0:
+                location[1] = height + 20  # set triangle below screen if past above
+                location[0] = random.randint(50, width - 50)  # set triangle to random x value
+
+        pygame.display.flip()
+        clock.tick(120)
+
 
 # ----------------MAIN PROGRAM-----------------------------------------------------------------------------------------
-
 main_window(W, H)
