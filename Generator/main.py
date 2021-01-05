@@ -133,12 +133,99 @@ class Backend(Thread):
         self.filters = filter_dict
         self.map_count = num
         self.directory = direc
+        self.maps_downloaded = []
+        self.finished = False
+        self.searching = False
+        self.filtering = False
+        self.all_maps = []
+        self.maps = []
 
     def run(self):
-        users_maps = fetch_maps(self.map_count)
-        maps = fetch_new_maps(users_maps, self.filters)
-        download_maps(maps,self.directory)
+        self.all_maps = self.fetch_maps()
+        self.maps = self.fetch_new_maps()
+        self.download_maps()
         print(time.time() - starting_time, "seconds")
+
+    def fetch_maps(self):
+        self.searching = True
+        generated_maps = []  # store all maps, format type unknown for now
+        xpath = ".//div[@data-id]"
+        desired_map_count = self.map_count
+
+        driver = webdriver.Chrome('user_files\chromedriver.exe')
+        driver.get('https://beatconnect.io/')
+
+        while len(generated_maps) < desired_map_count:
+            WebDriverWait(driver, timeout=5).until(return_sc)
+            map_str = driver.find_elements_by_xpath(xpath)
+
+            for beatmap in map_str:
+                map_id = beatmap.get_attribute('data-id')
+
+                if map_id not in generated_maps:
+                    generated_maps.append(map_id)
+
+                if len(generated_maps) >= desired_map_count:
+                    desired_map_count = len(generated_maps)
+                    break
+
+            driver.execute_script("window.scrollBy(0,document.body.scrollHeight)")
+        driver.quit()
+        return generated_maps
+
+    def download_maps(self):
+        self.filtering = False
+        print("this is the lst of beatmaps found", self.maps)
+        osu_path = self.directory.replace("\\","/")
+
+        for index, beatmap in enumerate(self.maps):
+            url = "http://beatconnect.io/b/" + str(beatmap)
+            req = urllib.request.Request(url, method='HEAD')
+            r = urllib.request.urlopen(req)
+            filename = urllib.parse.unquote(r.info().get_filename())  # decode the encoded non ASCII chars (e.g !)
+            filesize = r.headers['Content-Length']
+            path = osu_path + '/' + filename
+
+            # check if the user already has the map
+            try:
+                path_test = os.path.getsize(path[:-4])
+                print(path_test)
+            except OSError:
+                print(path[:-4], "doesn't exist!")
+            else:
+                print(path[:-4], "already exists!")
+                continue
+
+            self.maps_downloaded.append([filename,path,filesize])
+            urllib.request.urlretrieve(url, path)
+            print("finished downloading", str(index + 1), "map(s)! (" + filename + ")")
+        else:
+            self.finished = True
+
+    def fetch_new_maps(self):
+        self.searching = False
+        self.filtering = True
+        maps_to_filter = self.all_maps
+        new_maps = []
+
+        with open('user_files/access_token.txt', 'r') as f:
+            access_token = f.readline().rstrip("\n")
+        token_header = {'Authorization': 'Bearer ' + access_token}
+
+        for map_id in maps_to_filter:
+            beatmapset_info = requests.get("https://osu.ppy.sh/api/v2/beatmapsets/" + str(map_id),
+                                           headers=token_header).json()
+
+            beatmapset_diffs = beatmapset_info['beatmaps']  # holds all difficulties of the map set
+
+            diff_star_ratings = [dct['difficulty_rating'] for dct in
+                                 beatmapset_diffs]  # holds the star rating of each diff
+            diff_star_ratings.sort()
+
+            if map_filter(beatmapset_diffs, self.filters):
+                new_maps.append(beatmapset_diffs[-1]['beatmapset_id'])
+
+        return new_maps
 
 
 # --------------------------------------FUNCTIONALITY--------------------------------------------------------------------
@@ -161,31 +248,31 @@ def has_access_token():
     return True
 
 
-def fetch_maps(num):
-    generated_maps = []  # store all maps, format type unknown for now
-    xpath = ".//div[@data-id]"
-    desired_map_count = num
-
-    driver = webdriver.Chrome('user_files\chromedriver.exe')
-    driver.get('https://beatconnect.io/')
-
-    while len(generated_maps) < desired_map_count:
-        WebDriverWait(driver, timeout=5).until(return_sc)
-        map_str = driver.find_elements_by_xpath(xpath)
-
-        for beatmap in map_str:
-            map_id = beatmap.get_attribute('data-id')
-
-            if map_id not in generated_maps:
-                generated_maps.append(map_id)
-
-            if len(generated_maps) >= desired_map_count:
-                desired_map_count = len(generated_maps)
-                break
-
-        driver.execute_script("window.scrollBy(0,document.body.scrollHeight)")
-    driver.quit()
-    return generated_maps
+# def fetch_maps(num):
+#     generated_maps = []  # store all maps, format type unknown for now
+#     xpath = ".//div[@data-id]"
+#     desired_map_count = num
+#
+#     driver = webdriver.Chrome('user_files\chromedriver.exe')
+#     driver.get('https://beatconnect.io/')
+#
+#     while len(generated_maps) < desired_map_count:
+#         WebDriverWait(driver, timeout=5).until(return_sc)
+#         map_str = driver.find_elements_by_xpath(xpath)
+#
+#         for beatmap in map_str:
+#             map_id = beatmap.get_attribute('data-id')
+#
+#             if map_id not in generated_maps:
+#                 generated_maps.append(map_id)
+#
+#             if len(generated_maps) >= desired_map_count:
+#                 desired_map_count = len(generated_maps)
+#                 break
+#
+#         driver.execute_script("window.scrollBy(0,document.body.scrollHeight)")
+#     driver.quit()
+#     return generated_maps
 
 
 def fetch_access_token(**kwargs):
@@ -299,17 +386,17 @@ def fetch_new_maps(lst, map_filters):
     return new_maps
 
 
-def download_maps(lst,direc):
-    print("this is the lst of beatmaps found", lst)
-    osu_path = direc
-    for index, beatmap in enumerate(lst):
-        url = "http://beatconnect.io/b/" + str(beatmap)
-        req = urllib.request.Request(url, method='HEAD')
-        r = urllib.request.urlopen(req)
-        filename = urllib.parse.unquote(r.info().get_filename())  # decode the encoded non ASCII chars (e.g !)
-        print(filename)
-        urllib.request.urlretrieve(url, osu_path + '/' + filename)
-        print("finished downloading", str(index + 1), "map(s)! (" + filename + ")")
+# def download_maps(lst,direc):
+#     print("this is the lst of beatmaps found", lst)
+#     osu_path = direc
+#     for index, beatmap in enumerate(lst):
+#         url = "http://beatconnect.io/b/" + str(beatmap)
+#         req = urllib.request.Request(url, method='HEAD')
+#         r = urllib.request.urlopen(req)
+#         filename = urllib.parse.unquote(r.info().get_filename())  # decode the encoded non ASCII chars (e.g !)
+#         print(filename)
+#         urllib.request.urlretrieve(url, osu_path + '/' + filename)
+#         print("finished downloading", str(index + 1), "map(s)! (" + filename + ")")
 
 
 # function for drawing wrapped text, not my own
@@ -936,9 +1023,6 @@ def downloading_window(width,height,filters,num,direc):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    running = False
 
         for triangle, location in triangles:
             screen.blit(triangle, location)
@@ -946,6 +1030,57 @@ def downloading_window(width,height,filters,num,direc):
             if location[1] + triangle.get_height() < 0:
                 location[1] = height + 20  # set triangle below screen if past above
                 location[0] = random.randint(50, width - 50)  # set triangle to random x value
+
+        # tell user their maps are being searched
+        if thread.searching:
+            searching_text = osu_font.render("Your maps are currently being searched!",True,(78, 87, 130))
+            searching_text_rect = searching_text.get_rect()
+            searching_text_rect.center = (450,300)
+            screen.blit(searching_text,searching_text_rect)
+
+        # tell user the their maps are being filtered
+        if thread.filtering:
+            filtering_text = osu_font.render("The maps found are currently being filtered!",True,(78, 87, 130))
+            filtering_text_rect = filtering_text.get_rect()
+            filtering_text_rect.center = (450,300)
+            screen.blit(filtering_text,filtering_text_rect)
+
+        # display all the maps being downloaded, including 2 which have already been installed
+        if len(thread.maps_downloaded) != 0 and not thread.finished:
+            map_name = thread.maps_downloaded[-1][0]  # map name to be displayed
+            map_path = thread.maps_downloaded[-1][1]
+            map_size = int(thread.maps_downloaded[-1][2])
+
+            try:
+                map_current_size = os.path.getsize(map_path)
+                percentage = str(round(map_current_size / map_size * 100, 0)) + "%"
+            except FileNotFoundError:  # file not yet in Songs! directory
+                percentage = "-%"
+
+            map_name += "   " + percentage
+
+            map_name_text = osu_font.render(map_name,True,(51, 57, 84))
+            map_name_rect = map_name_text.get_rect()
+            map_name_rect.center = (450,300)
+            screen.blit(map_name_text,map_name_rect)
+
+            if len(thread.maps_downloaded) > 1:
+                map_name_text_2 = osu_font.render(thread.maps_downloaded[-2][0], True, (78, 87, 130))
+                map_name_rect_2 = map_name_text.get_rect()
+                map_name_rect_2.center = (450, 250)
+                screen.blit(map_name_text_2, map_name_rect_2)
+
+            if len(thread.maps_downloaded) > 2:
+                map_name_text_3 = osu_font.render(thread.maps_downloaded[-3][0], True, (121, 135, 201))
+                map_name_rect_3 = map_name_text.get_rect()
+                map_name_rect_3.center = (450, 200)
+                screen.blit(map_name_text_3, map_name_rect_3)
+
+        if thread.finished:  # when the backend has finished downloading all the maps
+            finished_text = osu_font.render("Finished downloading! Your songs are now on osu!.",True,(78, 87, 130))
+            finished_text_rect = finished_text.get_rect()
+            finished_text_rect.center = (450,300)
+            screen.blit(finished_text,finished_text_rect)
 
         pygame.display.flip()
         clock.tick(120)
