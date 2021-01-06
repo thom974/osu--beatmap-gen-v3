@@ -3,6 +3,7 @@ import pygame
 from pygame.time import Clock
 import urllib.request
 import urllib.parse
+import selenium
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 import time
@@ -150,10 +151,18 @@ class Backend(Thread):
         self.searching = True
         generated_maps = []  # store all maps, format type unknown for now
         xpath = ".//div[@data-id]"
+        all_xpath = ".//div[@class='categories-container container']//ul[@class='status left']//a[@data-value='all']"
+        ranked_xpath = ".//div[@class='categories-container container']//ul[@class='mode right']//a[@data-value='std']"
         desired_map_count = self.map_count
 
         driver = webdriver.Chrome('user_files\chromedriver.exe')
         driver.get('https://beatconnect.io/')
+        driver.maximize_window()  # maximize window, necessary for search to work
+        element = driver.find_element_by_xpath(all_xpath)
+        element_2 = driver.find_element_by_xpath(ranked_xpath)
+        element.click()
+        element_2.click()
+        time.sleep(1)  # wait for elements to load
 
         while len(generated_maps) < desired_map_count:
             WebDriverWait(driver, timeout=5).until(return_sc)
@@ -168,7 +177,6 @@ class Backend(Thread):
                 if len(generated_maps) >= desired_map_count:
                     desired_map_count = len(generated_maps)
                     break
-
             driver.execute_script("window.scrollBy(0,document.body.scrollHeight)")
         driver.quit()
         return generated_maps
