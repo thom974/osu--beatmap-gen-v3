@@ -572,12 +572,12 @@ def main_window(width, height):
                 location[1] = height + 20  # set triangle below screen if past above
                 location[0] = random.randint(50, width - 50)  # set triangle to random x value
 
-        # to display mouse coordinates
-        mx, my = pygame.mouse.get_pos()
-        text = osu_font.render(str(mx) + ", " + str(my), True, (255,255,255))
-        text_rect = text.get_rect()
-        text_rect.center = (100,100)
-        screen.blit(text,text_rect)
+        # # to display mouse coordinates
+        # mx, my = pygame.mouse.get_pos()
+        # text = osu_font.render(str(mx) + ", " + str(my), True, (255,255,255))
+        # text_rect = text.get_rect()
+        # text_rect.center = (100,100)
+        # screen.blit(text,text_rect)
 
         # display title
         screen.blit(title_text, title_rect)
