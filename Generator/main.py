@@ -10,7 +10,9 @@ import time
 import random
 import os
 from threading import Thread
+from dotenv import load_dotenv
 
+load_dotenv()
 starting_time = time.time()
 
 
@@ -304,7 +306,7 @@ def fetch_access_token(**kwargs):
 
         # fetch authorization token
         auth_body_data = {'client_id': '1659',
-                          'client_secret': 'kQYctkFBxE2vVWNlSzZdmPlLtBYdFE8a2m3cPrlE',
+                          'client_secret': os.getenv('client_secret'),
                           'code': code_for_auth,
                           'grant_type': 'authorization_code',
                           'redirect_uri': 'https://osu.ppy.sh/beatmapsets'
