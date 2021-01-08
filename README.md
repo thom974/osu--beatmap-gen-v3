@@ -13,7 +13,7 @@ also the program isn't as robust as i'd like it to be right now, as i'm still wo
 
 # installing the virtual environment 
 
-# note: you must have pipenv installed!
+note: you must have pipenv installed!
 
 an installation of the program's virtual environment is necessary for all the dependencies. To install the virtual environment, open a Command Prompt in the 'Generator' folder. You then need to run this command:
 
