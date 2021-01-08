@@ -15,10 +15,10 @@ also the program isn't as robust as i'd like it to be right now, as i'm still wo
 
 note: you must have pipenv installed!
 
-an installation of the program's virtual environment is necessary for all the dependencies. To install the virtual environment, open a Command Prompt in the 'Generator' folder. You then need to run this command:
+an installation of the program's virtual environment is necessary for all the dependencies. to install the virtual environment, open a Command Prompt in the 'Generator' folder. you then need to run this command:
 
 pipenv install --ignore-pipfile 
 
-To run the program, make sure Command Prompt is in the 'Generator' directory:
+to run the program, make sure Command Prompt is in the 'Generator' directory:
 
 pipenv run python main.py 
