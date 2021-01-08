@@ -1,1 +1,0 @@
-https://osu.ppy.sh/oauth/authorize?client_id=1659&redirect_uri=https%3A%2F%2Fosu.ppy.sh%2Fbeatmapsets&response_type=code&scope=public
