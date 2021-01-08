@@ -258,33 +258,6 @@ def has_access_token():
     return True
 
 
-# def fetch_maps(num):
-#     generated_maps = []  # store all maps, format type unknown for now
-#     xpath = ".//div[@data-id]"
-#     desired_map_count = num
-#
-#     driver = webdriver.Chrome('user_files\chromedriver.exe')
-#     driver.get('https://beatconnect.io/')
-#
-#     while len(generated_maps) < desired_map_count:
-#         WebDriverWait(driver, timeout=5).until(return_sc)
-#         map_str = driver.find_elements_by_xpath(xpath)
-#
-#         for beatmap in map_str:
-#             map_id = beatmap.get_attribute('data-id')
-#
-#             if map_id not in generated_maps:
-#                 generated_maps.append(map_id)
-#
-#             if len(generated_maps) >= desired_map_count:
-#                 desired_map_count = len(generated_maps)
-#                 break
-#
-#         driver.execute_script("window.scrollBy(0,document.body.scrollHeight)")
-#     driver.quit()
-#     return generated_maps
-
-
 def fetch_access_token(**kwargs):
     # parameters used to construct initial authorization url for the client
     req_user_perm = {'client_id': '1659',
@@ -961,10 +934,10 @@ def progress_window(width,height,dct):
 
         # display mouse pos
         mx, my = pygame.mouse.get_pos()
-        text = osu_font.render(str(mx) + ", " + str(my), True, (255, 255, 255))
-        text_rect = text.get_rect()
-        text_rect.center = (100, 100)
-        screen.blit(text, text_rect)
+        # text = osu_font.render(str(mx) + ", " + str(my), True, (255, 255, 255))
+        # text_rect = text.get_rect()
+        # text_rect.center = (100, 100)
+        # screen.blit(text, text_rect)
 
         # code to read songs_directory.txt
         with open('user_files/songs_directory.txt','r') as f:
