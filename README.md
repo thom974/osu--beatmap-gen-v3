@@ -22,3 +22,5 @@ pipenv install --ignore-pipfile
 to run the program, make sure Command Prompt is in the 'Generator' directory:
 
 pipenv run python main.py 
+
+OR // run the bat file.
