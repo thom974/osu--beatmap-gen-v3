@@ -573,7 +573,7 @@ def main_window(width, height):
                 location[0] = random.randint(50, width - 50)  # set triangle to random x value
 
         # # to display mouse coordinates
-        # mx, my = pygame.mouse.get_pos()
+        mx, my = pygame.mouse.get_pos()
         # text = osu_font.render(str(mx) + ", " + str(my), True, (255,255,255))
         # text_rect = text.get_rect()
         # text_rect.center = (100,100)
