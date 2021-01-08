@@ -10,3 +10,15 @@ IMPORTANT:
 when asked to specify the 'number of maps to filter', this DOES NOT mean how many maps you want to download. rather, it's the amount of maps you want the program to initially gather, before filtering out (according to the filters you set).
 
 also the program isn't as robust as i'd like it to be right now, as i'm still working on it. expect bugs/errors/random crashes from time to time. as long as you follow the instructions everything should be fine.
+
+# installing the virtual environment 
+
+note: you must have pipenv installed!
+
+an installation of the program's virtual environment is necessary for all the dependencies. To install the virtual environment, open a Command Prompt in the 'Generator' folder. You then need to run this command:
+
+pipenv install --ignore-pipfile 
+
+To run the program, make sure Command Prompt is in the 'Generator' directory:
+
+pipenv run python main.py 
