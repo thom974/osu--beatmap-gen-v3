@@ -296,49 +296,57 @@ def fetch_access_token(**kwargs):
 
 
 # how the maps are filtered
-def map_filter(dct, map_filters):
-    beatmapset_diffs = dct
+def map_filter(dictionary, map_filters):
+    beatmapset_diffs = dictionary
 
     # find top diff
-    diff_star_ratings = [dct['difficulty_rating'] for dct in beatmapset_diffs]  # holds the star rating of each diff
+    diff_star_ratings = [dct['difficulty_rating'] for dct in beatmapset_diffs if dct['mode'] == 'osu']  # holds the star rating of each diff
     diff_star_ratings.sort()
     for diff in beatmapset_diffs:
         if diff['difficulty_rating'] == diff_star_ratings[-1]:
             top_diff = diff
+            beatmap_id = diff['id']
             break
 
     # check star rating
     if not diff_star_ratings[-1] > map_filters['stars']:
+        # print("beatmap id", beatmap_id, "did not meet the star requirement. Top diff json:", top_diff)
         return False
 
     # check map set total play count
     diff_play_counts = sum([dct['playcount'] for dct in beatmapset_diffs])
-    if not diff_play_counts >= 100:
+    if not diff_play_counts >= 5:
+        # print("beatmap id", beatmap_id, "did not meet the play count requirement. Top diff json:", top_diff)
         return False
 
     # check length of map
     diff_length = top_diff['total_length']
     if not diff_length >= map_filters['len']:
+        # print("beatmap id", beatmap_id, "did not meet the length requirement. Top diff json:", top_diff)
         return False
 
     # check ar of map
     diff_ar = top_diff['ar']
     if not diff_ar >= map_filters['ar']:
+        # print("beatmap id", beatmap_id, "did not meet the ar requirement. Top diff json:", top_diff)
         return False
 
     # check bpm of map
     diff_bpm = top_diff['bpm']
     if not diff_bpm >= map_filters['bpm']:
+        # print("beatmap id", beatmap_id, "did not meet the bpm requirement. Top diff json:", top_diff)
         return False
 
     # check cs of map
     diff_cs = top_diff['cs']
     if not diff_cs <= map_filters['cs']:
+        # print("beatmap id", beatmap_id, "did not meet the cs requirement. Top diff json:", top_diff)
         return False
 
     # check status
     diff_status = top_diff['status']
     if not diff_status == map_filters['status'] and map_filters['status'] != 'any':
+        # print("beatmap id", beatmap_id, "did not meet the status requirement. Top diff json:", top_diff)
         return False
 
     return True
