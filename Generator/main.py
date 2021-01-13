@@ -10,7 +10,6 @@ import time
 import random
 import os
 from threading import Thread
-from dotenv import load_dotenv
 
 starting_time = time.time()
 
