@@ -478,7 +478,8 @@ def transition(width, height, copy):
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                quit()
+                pygame.quit()
+                exit()
 
         pygame.draw.polygon(screen, (252, 186, 3), rect_1_points, 0)
         pygame.draw.polygon(screen, (115, 223, 245), rect_2_points, 0)
@@ -541,6 +542,7 @@ def main_window(width, height):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
+                exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_clicked = True
 
@@ -625,7 +627,8 @@ def auth_window(width, height):
         mouse_clicked = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                quit()
+                pygame.quit()
+                exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_clicked = True
             if event.type == pygame.KEYDOWN:
@@ -706,7 +709,8 @@ def map_window(width, height):
         mouse_one_pressed = pygame.mouse.get_pressed(num_buttons=3)[0]
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                quit()
+                pygame.quit()
+                exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_clicked = True
             if event.type == pygame.KEYDOWN:
@@ -836,7 +840,8 @@ def download_window(width, height, filter_values):
         # event listener
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                quit()
+                pygame.quit()
+                exit()
             if event.type == pygame.MOUSEBUTTONDOWN and chromedriver_found and proceed_rect.collidepoint(mx, my):
                 running = False
                 progress_window(width, height,filter_values)
@@ -929,7 +934,8 @@ def progress_window(width,height,dct):
         mouse_one_pressed = pygame.mouse.get_pressed(num_buttons=3)[0]
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                quit()
+                pygame.quit()
+                exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_clicked = True
             if event.type == pygame.KEYDOWN:
@@ -1011,7 +1017,7 @@ def downloading_window(width,height,filters,num,direc):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-
+                exit()
         for triangle, location in triangles:
             screen.blit(triangle, location)
             location[1] -= y_offset
