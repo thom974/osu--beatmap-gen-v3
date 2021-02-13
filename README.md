@@ -1,5 +1,5 @@
 # osu--beatmap-gen-v3
-thomas' beatmap gen // wip
+python program with GUI made to generate maps for the game osu!
 
 an osu! application that utilizes the osu! api v2 and chromedriver, along with various python modules including requests and selenium.
 
