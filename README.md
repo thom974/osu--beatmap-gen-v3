@@ -1,3 +1,7 @@
+<p float="left">
+<img src="https://github.com/thom974/osu--beatmap-gen-v3/assets/74675902/3444e654-4f5f-495a-b042-15b0eb11d585" width="500" /> <img src="https://github.com/thom974/osu--beatmap-gen-v3/assets/74675902/9a390cab-c6eb-44af-9da6-6cde41caa00d" width="500" /> <img src="https://github.com/thom974/osu--beatmap-gen-v3/assets/74675902/f20bab38-c364-4ef9-9c2a-5a932053a777" width="500" /> <img src="https://github.com/thom974/osu--beatmap-gen-v3/assets/74675902/b1754a0b-3dfa-4265-a6f2-6a3e7dfe966b" width="500" />
+</p>
+ 
 # osu--beatmap-gen-v3
 python program with GUI made to generate maps for the game osu!
 
